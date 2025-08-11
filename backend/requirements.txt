@@ -1,0 +1,52 @@
+# Core Django Framework
+Django==5.2.1
+asgiref==3.8.1
+sqlparse==0.5.3
+tzdata==2025.2
+
+# Django REST Framework
+djangorestframework==3.16.1
+djangorestframework-simplejwt==5.5.0
+PyJWT==2.9.0
+
+# CORS Support
+django-cors-headers==4.7.0
+
+# Database & Filtering
+django-filter==25.1
+
+# Database Support
+psycopg2-binary==2.9.10  # PostgreSQL adapter
+dj-database-url==2.3.0   # Database URL parsing
+
+# Environment Management
+python-dotenv==1.0.1     # Load environment variables from .env files
+
+# Image Processing
+Pillow==11.3.0
+
+# Development Dependencies (Optional)
+# Uncomment for development environment
+# django-debug-toolbar==4.4.6
+# pytest==8.3.4
+# pytest-django==4.9.0
+# pytest-cov==6.0.0
+# black==25.8.0
+# flake8==7.1.1
+# isort==5.14.4
+# python-dotenv==1.0.1
+# django-extensions==3.2.3
+# ipython==8.30.0
+
+# Production Dependencies (Optional)
+# Uncomment for production deployment
+# gunicorn==23.0.0
+# psycopg2-binary==2.9.10
+# redis==5.2.1
+# celery==5.4.0
+# django-storages==1.14.5
+# boto3==1.37.41
+# whitenoise==6.9.0
+# sentry-sdk==2.22.0
+# django-redis==5.4.0
+# python-decouple==3.8
