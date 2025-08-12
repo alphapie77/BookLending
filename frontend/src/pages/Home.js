@@ -328,9 +328,9 @@ const Home = () => {
               <Link key={book.id} to={`/book/${book.id}`} className="group block">
                 <div className="bg-white rounded-3xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl border border-gray-100">
                   <div className="relative overflow-hidden bg-gray-50 flex items-center justify-center">
-                    {(book.cover_image || book.cover_image_url) ? (
+                    {(book.display_image || book.cover_image || book.cover_image_url) ? (
                       <img
-                        src={book.cover_image || book.cover_image_url}
+                        src={book.display_image || book.cover_image || book.cover_image_url}
                         alt={book.title}
                         className="h-64 w-auto max-w-full object-contain transition-transform duration-500 group-hover:scale-105"
                         onError={(e) => {
@@ -339,7 +339,7 @@ const Home = () => {
                         }}
                       />
                     ) : null}
-                    <div className={`h-64 w-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center ${(book.cover_image || book.cover_image_url) ? 'hidden' : 'flex'}`}>
+                    <div className={`h-64 w-full bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center ${(book.display_image || book.cover_image || book.cover_image_url) ? 'hidden' : 'flex'}`}>
                       <div className="text-center">
                         <BookOpen className="w-16 h-16 text-violet-400 mx-auto mb-3" />
                         <span className="text-violet-500 font-semibold text-lg">{book.title}</span>
