@@ -20,15 +20,25 @@ const BookSearch = () => {
   const [wishlistLoading, setWishlistLoading] = useState({})
 
   useEffect(() => {
-    // Get search query from URL params if available
+    // Get search query and filters from URL params
     const urlParams = new URLSearchParams(location.search)
-    const queryFromUrl = urlParams.get('q')
-    if (queryFromUrl) {
-      setSearchQuery(queryFromUrl)
-      fetchBooks(queryFromUrl)
-    } else {
-      fetchBooks('', {})
-    }
+    const queryFromUrl = urlParams.get('q') || ''
+    const genreFromUrl = urlParams.get('genre') || ''
+    const conditionFromUrl = urlParams.get('condition') || ''
+    const lendingTypeFromUrl = urlParams.get('lending_type') || ''
+    
+    setSearchQuery(queryFromUrl)
+    setFilters({
+      genre: genreFromUrl,
+      condition: conditionFromUrl,
+      lending_type: lendingTypeFromUrl
+    })
+    
+    fetchBooks(queryFromUrl, {
+      genre: genreFromUrl,
+      condition: conditionFromUrl,
+      lending_type: lendingTypeFromUrl
+    })
     
     if (user) {
       fetchWishlist()
