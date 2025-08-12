@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const API_BASE_URL = 'http://127.0.0.1:8000'
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000'
+console.log('API Base URL:', API_BASE_URL)
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -110,8 +111,14 @@ export const wishlistService = {
 
 // Statistics and featured content
 export const homeService = {
-  getStatistics: () => api.get('/api/statistics/'),
-  getFeaturedBooks: () => api.get('/api/featured-books/'),
+  getStatistics: () => {
+    console.log('Fetching statistics from /api/statistics/')
+    return api.get('/api/statistics/')
+  },
+  getFeaturedBooks: () => {
+    console.log('Fetching featured books from /api/featured-books/')
+    return api.get('/api/featured-books/')
+  },
 }
 
 // Google Books API integration

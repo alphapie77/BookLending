@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { homeService } from '../services/api'
 import { BookOpen, Users, TrendingUp, Star, ArrowRight } from 'lucide-react'
+import axios from 'axios'
 
 const PublicHome = () => {
   const [stats, setStats] = useState({})
@@ -14,14 +15,39 @@ const PublicHome = () => {
 
   const fetchData = async () => {
     try {
-      const [statsResponse, featuredResponse] = await Promise.all([
-        homeService.getStatistics(),
-        homeService.getFeaturedBooks()
-      ])
+      console.log('Starting to fetch data for PublicHome')
+      
+      // Try direct axios calls first
+      const statsResponse = await axios.get('http://127.0.0.1:8000/api/statistics/')
+      const featuredResponse = await axios.get('http://127.0.0.1:8000/api/featured-books/')
+      
+      console.log('Stats response:', statsResponse.data)
+      console.log('Featured books response:', featuredResponse.data)
       setStats(statsResponse.data)
       setFeaturedBooks(featuredResponse.data)
     } catch (error) {
       console.error('Error fetching data:', error)
+      console.error('Error details:', error.response?.data, error.response?.status)
+      
+      // Try with homeService as fallback
+      try {
+        console.log('Trying with homeService...')
+        const [statsResponse, featuredResponse] = await Promise.all([
+          homeService.getStatistics(),
+          homeService.getFeaturedBooks()
+        ])
+        setStats(statsResponse.data)
+        setFeaturedBooks(featuredResponse.data)
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError)
+        // Set fallback data if API fails
+        setStats({
+          total_books: 0,
+          total_users: 0,
+          total_loans: 0
+        })
+        setFeaturedBooks([])
+      }
     } finally {
       setLoading(false)
     }
@@ -108,39 +134,47 @@ const PublicHome = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {featuredBooks.slice(0, 6).map((book) => (
-            <Link
-              key={book.id}
-              to={`/book/${book.id}`}
-              className="group bg-white/60 backdrop-blur-sm rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/20"
-            >
-              <div className="h-48 bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center relative">
-                {book.cover_image ? (
-                  <img
-                    src={book.cover_image}
-                    alt={book.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-center">
-                    <BookOpen className="w-16 h-16 text-violet-400 mx-auto mb-2" />
-                    <h4 className="text-lg font-semibold text-violet-600 px-2">{book.title}</h4>
+          {featuredBooks.length > 0 ? (
+            featuredBooks.slice(0, 6).map((book) => (
+              <Link
+                key={book.id}
+                to={`/book/${book.id}`}
+                className="group bg-white/60 backdrop-blur-sm rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/20"
+              >
+                <div className="h-48 bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center relative">
+                  {book.cover_image_url || book.cover_image ? (
+                    <img
+                      src={book.cover_image_url || book.cover_image}
+                      alt={book.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <BookOpen className="w-16 h-16 text-violet-400 mx-auto mb-2" />
+                      <h4 className="text-lg font-semibold text-violet-600 px-2">{book.title}</h4>
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center">
+                    <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
+                    <span className="text-sm font-medium">4.5</span>
                   </div>
-                )}
-                <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 flex items-center">
-                  <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                  <span className="text-sm font-medium">4.5</span>
                 </div>
-              </div>
-              <div className="p-6">
-                <h3 className="font-bold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors">
-                  {book.title}
-                </h3>
-                <p className="text-gray-600 text-sm mb-2">by {book.author}</p>
-                <p className="text-gray-500 text-xs">{book.genre}</p>
-              </div>
-            </Link>
-          ))}
+                <div className="p-6">
+                  <h3 className="font-bold text-gray-900 mb-2 group-hover:text-violet-600 transition-colors">
+                    {book.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-2">by {book.author}</p>
+                  <p className="text-gray-500 text-xs">{book.genre}</p>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12">
+              <BookOpen className="w-16 h-16 text-violet-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">No Books Available Yet</h3>
+              <p className="text-gray-500">Be the first to add books to our community!</p>
+            </div>
+          )}
         </div>
 
         <div className="text-center mt-12">
