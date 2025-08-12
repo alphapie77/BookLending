@@ -15,10 +15,8 @@ const AddBook = () => {
     condition: 'good',
     lending_type: 'lending',
     publication_year: '',
-    cover_image: '',
-    book_photos: []
-  })
-  const [photoFiles, setPhotoFiles] = useState([])
+    cover_image_url: ''
+  }) 
   const [errors, setErrors] = useState({})
   const [loading, setLoading] = useState(false)
   const [searchLoading, setSearchLoading] = useState(false)
@@ -44,7 +42,6 @@ const AddBook = () => {
       ...prev,
       [name]: value
     }))
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -82,28 +79,23 @@ const AddBook = () => {
   const selectBookFromSearch = (bookInfo) => {
     console.log('Selected book info:', bookInfo)
     
-    // Extract publication year from publishedDate
     let publicationYear = ''
     if (bookInfo.publishedDate) {
       const year = bookInfo.publishedDate.match(/\d{4}/)
       publicationYear = year ? year[0] : ''
     }
-    
-    // Get the best quality image
+
     const coverImage = bookInfo.imageLinks?.large || 
                       bookInfo.imageLinks?.medium || 
                       bookInfo.imageLinks?.thumbnail || 
                       bookInfo.imageLinks?.smallThumbnail || ''
     
-    // Extract ISBN
     const isbn = bookInfo.industryIdentifiers?.find(id => id.type === 'ISBN_13')?.identifier || 
                  bookInfo.industryIdentifiers?.find(id => id.type === 'ISBN_10')?.identifier || ''
     
-    // Clean description from HTML tags
     const cleanDescription = bookInfo.description ? 
       bookInfo.description.replace(/<[^>]*>/g, '').substring(0, 500) : ''
     
-    // Map Google Books categories to our genres
     const mapGenre = (categories) => {
       if (!categories || !categories[0]) return 'Other'
       const category = categories[0].toLowerCase()
@@ -125,17 +117,15 @@ const AddBook = () => {
       author: bookInfo.authors ? bookInfo.authors.join(', ') : '',
       description: cleanDescription,
       publication_year: publicationYear,
-      cover_image: coverImage,
+      cover_image_url: coverImage,
       genre: mapGenre(bookInfo.categories),
       isbn: isbn,
-      condition: formData.condition, // Keep existing condition
-      lending_type: formData.lending_type // Keep existing lending type
+      condition: formData.condition,
+      lending_type: formData.lending_type
     }
-    
+
     console.log('Setting form data:', newFormData)
     setFormData(newFormData)
-    
-    // Clear any existing errors
     setErrors({})
     setSearchResults([])
     toast.success('Book information filled automatically!')
@@ -143,7 +133,7 @@ const AddBook = () => {
 
   const validateForm = () => {
     const newErrors = {}
-    
+
     console.log('Validating form data:', formData)
     
     if (!formData.title || !formData.title.trim()) {
@@ -151,37 +141,37 @@ const AddBook = () => {
     } else if (formData.title.length > 200) {
       newErrors.title = 'Title must be less than 200 characters'
     }
-    
+
     if (!formData.author || !formData.author.trim()) {
       newErrors.author = 'Author is required'
     } else if (formData.author.length > 100) {
       newErrors.author = 'Author name must be less than 100 characters'
     }
-    
+
     if (!formData.genre || !formData.genre.trim()) {
       newErrors.genre = 'Genre is required'
     }
-    
+
     if (formData.publication_year) {
       const year = parseInt(formData.publication_year)
       if (isNaN(year) || year < 1000 || year > new Date().getFullYear()) {
         newErrors.publication_year = 'Please enter a valid year between 1000 and ' + new Date().getFullYear()
       }
     }
-    
+
     if (formData.isbn && formData.isbn.length > 13) {
       newErrors.isbn = 'ISBN must be 10 or 13 digits'
     }
-    
+
     if (formData.cover_image && formData.cover_image.trim() && !isValidUrl(formData.cover_image.trim())) {
       newErrors.cover_image = 'Please enter a valid URL'
     }
-    
+
     console.log('Validation errors:', newErrors)
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
-  
+
   const isValidUrl = (string) => {
     try {
       new URL(string)
@@ -194,16 +184,8 @@ const AddBook = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // Simple validation
     if (!formData.title || !formData.author || !formData.genre) {
       toast.error('Please fill in title, author, and genre')
-      return
-    }
-    
-    const token = localStorage.getItem('token')
-    if (!token) {
-      toast.error('Please log in to add a book')
-      navigate('/login')
       return
     }
     
@@ -218,42 +200,24 @@ const AddBook = () => {
         condition: formData.condition,
         lending_type: formData.lending_type,
         publication_year: formData.publication_year ? parseInt(formData.publication_year) : null,
-        cover_image: formData.cover_image || ''
+        cover_image_url: formData.cover_image_url || ''
       }
       
       console.log('Submitting book data:', bookData)
-      console.log('Token:', token)
-      const formDataToSend = new FormData()
       
-      Object.keys(bookData).forEach(key => {
-        if (key === 'cover_image' && bookData[key] instanceof File) {
-          formDataToSend.append('cover_image', bookData[key])
-        } else if (bookData[key] !== null && bookData[key] !== undefined && bookData[key] !== '') {
-          formDataToSend.append(key, bookData[key])
-        }
-      })
+      const response = await bookService.createBook(bookData)
       
-      const response = await fetch('http://localhost:8000/api/books/', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${token}`
-        },
-        body: formDataToSend
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(JSON.stringify(errorData))
-      }
-      
-      const responseData = await response.json()
-      console.log('Success response:', response.data)
-      
+      console.log('Book creation response:', response)
       toast.success('Book added successfully!')
       navigate('/dashboard')
     } catch (error) {
-      console.error('Error:', error)
-      toast.error(error.response?.data?.error || error.message || 'Failed to add book')
+      console.error('Full error:', error)
+      console.error('Error response:', error.response)
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.detail || 
+                          error.message || 
+                          'Failed to add book'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -261,7 +225,6 @@ const AddBook = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-purple-50 py-8">
-      {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-20 w-64 h-64 bg-gradient-to-r from-blue-200 to-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
         <div className="absolute top-40 right-20 w-80 h-80 bg-gradient-to-r from-purple-200 to-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
@@ -282,7 +245,6 @@ const AddBook = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Form */}
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
             <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-8 py-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
@@ -293,9 +255,8 @@ const AddBook = () => {
             </div>
             <form onSubmit={handleSubmit}>
               <div className="p-8 space-y-6">
-                {/* Auto-fill from Google Books */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-                  <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                  <label className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
                     <Search className="w-4 h-4 mr-2 text-blue-600" />
                     Quick Fill from Google Books
                   </label>
@@ -304,7 +265,7 @@ const AddBook = () => {
                       type="text"
                       placeholder="Enter book title to search..."
                       value={formData.title}
-                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                      onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))} 
                       className="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     />
                     <button
@@ -320,7 +281,7 @@ const AddBook = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="title" className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="title" className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                     Title *
                   </label>
                   <input
@@ -336,7 +297,7 @@ const AddBook = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="author" className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="author" className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                     Author *
                   </label>
                   <input
@@ -353,7 +314,7 @@ const AddBook = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="genre" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="genre" className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                       Genre *
                     </label>
                     <select
@@ -372,7 +333,7 @@ const AddBook = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="publication_year" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="publication_year" className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                       Publication Year
                     </label>
                     <input
@@ -391,7 +352,7 @@ const AddBook = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="isbn" className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="isbn" className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                     ISBN
                   </label>
                   <input
@@ -408,7 +369,7 @@ const AddBook = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label htmlFor="condition" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="condition" className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                       Condition
                     </label>
                     <select
@@ -427,7 +388,7 @@ const AddBook = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="lending_type" className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label htmlFor="lending_type" className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                       Lending Type
                     </label>
                     <select
@@ -447,65 +408,22 @@ const AddBook = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Book Photos
+                  <label htmlFor="cover_image_url" className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                    Cover Image URL
                   </label>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files)
-                      setPhotoFiles(files)
-                      setFormData(prev => ({ ...prev, book_photos: files }))
-                    }}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">Upload multiple photos of your book (optional)</p>
-                  {photoFiles.length > 0 && (
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      {photoFiles.map((file, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt={`Book photo ${index + 1}`}
-                            className="w-full h-20 object-cover rounded-lg"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Cover Image
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0]
-                      if (file) {
-                        setFormData(prev => ({ ...prev, cover_image: file }))
-                      }
-                    }}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all mb-3"
-                  />
                   <input
                     type="url"
-                    id="cover_image"
-                    name="cover_image"
-                    value={formData.cover_image}
+                    id="cover_image_url"
+                    name="cover_image_url"
+                    value={formData.cover_image_url}
                     onChange={handleChange}
                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
-                    placeholder="Or enter image URL"
+                    placeholder="Enter image URL (optional)"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label htmlFor="description" className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
                     Description
                   </label>
                   <textarea
@@ -549,9 +467,7 @@ const AddBook = () => {
             </form>
           </div>
 
-          {/* Preview & Search Results */}
           <div className="space-y-8">
-            {/* Book Preview */}
             <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
               <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-8 py-6">
                 <h3 className="text-2xl font-bold text-white flex items-center">
@@ -564,9 +480,9 @@ const AddBook = () => {
                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
                   <div className="flex gap-6">
                     <div className="flex-shrink-0">
-                      {formData.cover_image ? (
+                      {formData.cover_image_url ? (
                         <img 
-                          src={formData.cover_image instanceof File ? URL.createObjectURL(formData.cover_image) : formData.cover_image} 
+                          src={formData.cover_image_url} 
                           alt={formData.title}
                           className="w-32 h-44 object-cover rounded-xl shadow-lg"
                         />
@@ -590,10 +506,10 @@ const AddBook = () => {
                           </span>
                         )}
                         {formData.condition && (
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${ 
                             formData.condition === 'new' ? 'bg-green-100 text-green-800' :
                             formData.condition === 'like_new' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
+                            'bg-gray-100 text-gray-800' 
                           }`}>
                             {conditions.find(c => c.value === formData.condition)?.label}
                           </span>
@@ -615,7 +531,6 @@ const AddBook = () => {
               </div>
             </div>
 
-            {/* Search Results */}
             {searchResults.length > 0 && (
               <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 overflow-hidden">
                 <div className="bg-gradient-to-r from-blue-600 to-cyan-600 px-8 py-6">

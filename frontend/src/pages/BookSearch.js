@@ -104,7 +104,6 @@ const BookSearch = () => {
       }
     } catch (error) {
       console.error('Error toggling wishlist:', error)
-      alert('Error updating wishlist. Please try again.')
     } finally {
       setWishlistLoading(prev => ({ ...prev, [book.id]: false }))
     }

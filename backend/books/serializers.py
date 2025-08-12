@@ -3,22 +3,29 @@ from django.contrib.auth.models import User
 from .models import Book, BookRequest, BookLoan, UserProfile, Wishlist
 
 class BookCreateSerializer(serializers.ModelSerializer):
-    cover_image = serializers.ImageField(required=False, allow_null=True)
-    cover_image_url = serializers.URLField(required=False, allow_blank=True)
-    
     class Meta:
         model = Book
-        fields = ['title', 'author', 'isbn', 'genre', 'description', 'condition', 'lending_type', 'publication_year', 'cover_image', 'cover_image_url']
+        fields = ['title', 'author', 'isbn', 'genre', 'description', 'condition', 'lending_type', 'publication_year', 'cover_image_url']
         extra_kwargs = {
             'isbn': {'required': False, 'allow_blank': True},
             'description': {'required': False, 'allow_blank': True},
             'condition': {'default': 'good'},
             'lending_type': {'default': 'lending'},
-            'publication_year': {'required': False, 'allow_null': True}
+            'publication_year': {'required': False, 'allow_null': True},
+            'cover_image_url': {'required': False, 'allow_blank': True}
         }
     
     def create(self, validated_data):
         user = self.context['request'].user
+        validated_data.pop('owner', None)
+        
+        # Ensure required fields have defaults
+        if not validated_data.get('condition'):
+            validated_data['condition'] = 'good'
+        if not validated_data.get('lending_type'):
+            validated_data['lending_type'] = 'lending'
+            
+        print(f"Creating book with validated_data: {validated_data}")
         book = Book.objects.create(owner=user, **validated_data)
         return book
 

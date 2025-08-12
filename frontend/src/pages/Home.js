@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { BookOpen, Users, Search, ArrowRight, Star, Heart, Zap, Library, BookMarked, UserPlus, Plus } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { homeService, wishlistService } from '../services/api'
 
 const Home = () => {
   const { user, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const [featuredBooks, setFeaturedBooks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -17,6 +19,8 @@ const Home = () => {
     available_books: 0
   })
   const [wishlistCount, setWishlistCount] = useState(0)
+  const [wishlistItems, setWishlistItems] = useState([])
+  const [wishlistLoading, setWishlistLoading] = useState({})
   
   useEffect(() => {
     const fetchData = async () => {
@@ -42,6 +46,7 @@ const Home = () => {
         if (isAuthenticated) {
           try {
             const wishlistResponse = await wishlistService.getWishlist()
+            setWishlistItems(wishlistResponse.data || [])
             setWishlistCount(wishlistResponse.data?.length || 0)
           } catch (err) {
             console.error('Failed to fetch wishlist:', err)
@@ -56,6 +61,63 @@ const Home = () => {
     
     fetchData()
   }, [isAuthenticated])
+  
+  const isInWishlist = (book) => {
+    return wishlistItems.some(item => 
+      item.title.toLowerCase() === book.title.toLowerCase() && 
+      item.author.toLowerCase() === book.author.toLowerCase()
+    )
+  }
+
+  const addToWishlist = async (book, e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    console.log('Button clicked, user:', user)
+    
+    if (!user) {
+      alert('Please login first')
+      navigate('/login')
+      return
+    }
+
+    setWishlistLoading(prev => ({ ...prev, [book.id]: true }))
+    
+    // Simple direct approach
+    try {
+      const token = localStorage.getItem('token')
+      console.log('Token:', token)
+      
+      const response = await fetch('http://127.0.0.1:8000/api/add-wishlist/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`
+        },
+        body: JSON.stringify({
+          title: book.title,
+          author: book.author,
+          isbn: book.isbn || ''
+        })
+      })
+      
+      console.log('Response status:', response.status)
+      const data = await response.json()
+      console.log('Response data:', data)
+      
+      if (response.ok) {
+        alert('Added to wishlist!')
+        navigate('/wishlist')
+      } else {
+        alert('Error: ' + (data.error || 'Failed to add'))
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Network error')
+    } finally {
+      setWishlistLoading(prev => ({ ...prev, [book.id]: false }))
+    }
+  }
   
   return (
     <div className="relative min-h-screen">
@@ -325,9 +387,21 @@ const Home = () => {
                         </span>
                       </div>
                       
-                      <div className="flex items-center space-x-1">
-                        <Heart className="w-4 h-4 text-red-500" />
-                        <span className="text-sm text-gray-500">{book.wishlist_count || 0}</span>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            alert('Button clicked!')
+                            addToWishlist(book, e)
+                          }}
+                          disabled={wishlistLoading[book.id]}
+                          className="p-2 rounded-full transition-all duration-300 disabled:opacity-50 hover:scale-110 text-red-500 bg-red-50 hover:bg-red-100"
+                          title="Add to wishlist"
+                        >
+                          <Heart className="w-4 h-4" />
+                        </button>
+
                       </div>
                     </div>
                     

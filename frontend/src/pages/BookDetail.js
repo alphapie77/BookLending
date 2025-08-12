@@ -77,21 +77,17 @@ const BookDetail = () => {
         if (wishlistItem) {
           await wishlistService.removeFromWishlist(wishlistItem.id)
           setInWishlist(false)
-          alert('Removed from wishlist!')
         }
       } else {
-        const response = await wishlistService.addToWishlist({ 
+        await wishlistService.addToWishlist({ 
           title: book.title,
           author: book.author,
           isbn: book.isbn || ''
         })
         setInWishlist(true)
-        alert('Added to wishlist!')
       }
     } catch (error) {
       console.error('Error toggling wishlist:', error)
-      console.error('Error response:', error.response?.data)
-      alert(`Error updating wishlist: ${error.response?.data?.error || error.message}`)
     } finally {
       setWishlistLoading(false)
     }

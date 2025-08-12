@@ -12,7 +12,7 @@ import requests
 from .models import Book, BookRequest, BookLoan, UserProfile, Wishlist
 from .serializers import (
     BookSerializer, BookCreateSerializer, BookRequestSerializer, BookLoanSerializer, 
-    UserProfileSerializer, WishlistSerializer, UserRegistrationSerializer
+    UserProfileSerializer, WishlistSerializer, UserRegistrationSerializer, UserSerializer
 )
 
 @api_view(['POST'])
@@ -88,9 +88,16 @@ class BookViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.request.method == 'POST':
+            return BookCreateSerializer
+        elif self.request.method in ['PUT', 'PATCH']:
             return BookCreateSerializer
         return BookSerializer
+    
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticatedOrReadOnly()]
     
     def update(self, request, *args, **kwargs):
         book = self.get_object()
@@ -105,10 +112,18 @@ class BookViewSet(viewsets.ModelViewSet):
         return super().destroy(request, *args, **kwargs)
     
     def perform_create(self, serializer):
-        if not self.request.user.is_authenticated:
-            raise PermissionDenied('Authentication required to add books')
-        book = serializer.save()
-        return book
+        print(f"Request data: {self.request.data}")
+        print(f"User: {self.request.user}")
+        print(f"Serializer data: {serializer.validated_data}")
+        try:
+            book = serializer.save(owner=self.request.user)
+            print(f"Book created: {book.id} - {book.title} by {book.owner}")
+            return book
+        except Exception as e:
+            print(f"Error creating book: {e}")
+            import traceback
+            print(traceback.format_exc())
+            raise
     
     @action(detail=False, methods=['get'])
     def available(self, request):
@@ -384,27 +399,21 @@ class WishlistViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        print(f"WishlistViewSet get_queryset - User: {self.request.user}")
-        print(f"WishlistViewSet get_queryset - Is authenticated: {self.request.user.is_authenticated}")
-        if self.request.user.is_authenticated:
-            queryset = Wishlist.objects.filter(user=self.request.user).order_by('-created_at')
-            print(f"WishlistViewSet get_queryset - Queryset count: {queryset.count()}")
-            return queryset
-        print("WishlistViewSet get_queryset - User not authenticated, returning empty queryset")
-        return Wishlist.objects.none()
+        return Wishlist.objects.filter(user=self.request.user).order_by('-created_at')
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
     
     @action(detail=False, methods=['get'])
     def with_availability(self, request):
-        """Get wishlist items with availability information from the library"""
         wishlist_items = self.get_queryset()
         result = []
         
         for item in wishlist_items:
-            # Search for matching books in the library
             matching_books = Book.objects.filter(
                 Q(title__icontains=item.title) | Q(author__icontains=item.author),
                 availability='available'
-            ).exclude(owner=request.user)[:3]  # Limit to 3 matches
+            ).exclude(owner=request.user)[:3]
             
             item_data = WishlistSerializer(item).data
             item_data['available_books'] = BookSerializer(matching_books, many=True).data
@@ -413,46 +422,19 @@ class WishlistViewSet(viewsets.ModelViewSet):
         
         return Response(result)
     
-    def create(self, request, *args, **kwargs):
-        # Check for existing wishlist item
-        existing = Wishlist.objects.filter(
-            user=request.user,
-            title=request.data.get('title'),
-            author=request.data.get('author')
-        ).first()
-        
-        if existing:
-            # Return the existing item instead of creating duplicate
-            serializer = self.get_serializer(existing)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        
-        serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            try:
-                wishlist_item = serializer.save(user=request.user)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except Exception as e:
-                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
-            return Response({'error': 'Validation failed', 'details': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    
     @action(detail=True, methods=['post'])
     def find_matches(self, request, pk=None):
-        """Find matching books in the library for a specific wishlist item"""
         wishlist_item = self.get_object()
         
-        # Search for matching books
         matching_books = Book.objects.filter(
             Q(title__icontains=wishlist_item.title) | 
-            Q(author__icontains=wishlist_item.author) |
-            Q(isbn=wishlist_item.isbn) if wishlist_item.isbn else Q(),
+            Q(author__icontains=wishlist_item.author),
             availability='available'
         ).exclude(owner=request.user)
         
-        serializer = BookSerializer(matching_books, many=True)
         return Response({
             'wishlist_item': WishlistSerializer(wishlist_item).data,
-            'matching_books': serializer.data,
+            'matching_books': BookSerializer(matching_books, many=True).data,
             'count': matching_books.count()
         })
 
@@ -482,14 +464,38 @@ def get_featured_books(request):
 @permission_classes([permissions.IsAuthenticated])
 def create_book_simple(request):
     try:
-        serializer = BookCreateSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            book = serializer.save()
-            return Response({'id': book.id, 'title': book.title}, status=status.HTTP_201_CREATED)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print(f"User: {request.user}")
+        print(f"Data: {request.data}")
+        
+        # Validate required fields
+        if not request.data.get('title'):
+            return Response({'error': 'Title is required'}, status=400)
+        if not request.data.get('author'):
+            return Response({'error': 'Author is required'}, status=400)
+        if not request.data.get('genre'):
+            return Response({'error': 'Genre is required'}, status=400)
+            
+        book = Book(
+            owner=request.user,
+            title=request.data.get('title'),
+            author=request.data.get('author'),
+            isbn=request.data.get('isbn', ''),
+            genre=request.data.get('genre'),
+            description=request.data.get('description', ''),
+            condition=request.data.get('condition', 'good'),
+            lending_type=request.data.get('lending_type', 'lending'),
+            publication_year=request.data.get('publication_year') or None,
+            cover_image_url=request.data.get('cover_image_url', '')
+        )
+        book.save()
+        
+        print(f"Book created: {book.id}")
+        return Response({'id': book.id, 'title': book.title, 'success': True}, status=201)
     except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        print(f"Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return Response({'error': str(e)}, status=500)
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
@@ -510,6 +516,62 @@ def create_book_request(request):
     )
     
     return Response({'success': True, 'id': book_request.id}, status=201)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def add_to_wishlist(request):
+    title = request.data.get('title')
+    author = request.data.get('author')
+    isbn = request.data.get('isbn', '')
+    
+    wishlist_item, created = Wishlist.objects.get_or_create(
+        user=request.user,
+        title=title,
+        author=author,
+        defaults={'isbn': isbn}
+    )
+    
+    return Response({
+        'id': wishlist_item.id,
+        'title': wishlist_item.title,
+        'author': wishlist_item.author,
+        'created': created
+    }, status=201)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def simple_add_book(request):
+    try:
+        print(f"Request data: {request.data}")
+        print(f"User: {request.user}")
+        
+        book = Book(
+            owner=request.user,
+            title=request.data.get('title', 'Test Title'),
+            author=request.data.get('author', 'Test Author'),
+            genre=request.data.get('genre', 'Fiction'),
+            isbn=request.data.get('isbn', ''),
+            description=request.data.get('description', ''),
+            condition=request.data.get('condition', 'good'),
+            lending_type=request.data.get('lending_type', 'lending'),
+            publication_year=request.data.get('publication_year') or None,
+            cover_image_url=request.data.get('cover_image_url', '')
+        )
+        book.save()
+        
+        print(f"Book saved: {book.id}")
+        
+        return Response({
+            'id': book.id,
+            'title': book.title,
+            'author': book.author,
+            'success': True
+        }, status=201)
+    except Exception as e:
+        print(f"Error: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return Response({'error': str(e)}, status=500)
 
 @api_view(['PUT'])
 @permission_classes([permissions.IsAuthenticated])

@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = 'http://127.0.0.1:8000'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -48,7 +48,7 @@ export const bookService = {
   getBook: (id) => api.get(`/api/books/${id}/`),
   createBook: (data) => {
     console.log('Creating book with data:', data)
-    return api.post('/api/books/', data)
+    return api.post('/api/create-book-simple/', data)
   },
   updateBook: (id, data) => api.put(`/api/books/${id}/`, data),
   deleteBook: (id) => api.delete(`/api/books/${id}/`),
@@ -103,7 +103,7 @@ export const wishlistService = {
     console.log('Making wishlist with availability API call')
     return api.get('/api/wishlist/with_availability/')
   },
-  addToWishlist: (data) => api.post('/api/wishlist/', data),
+  addToWishlist: (data) => api.post('/api/add-wishlist/', data),
   removeFromWishlist: (id) => api.delete(`/api/wishlist/${id}/`),
   findMatches: (id) => api.post(`/api/wishlist/${id}/find_matches/`),
 }

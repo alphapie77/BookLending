@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     BookViewSet, BookLoanViewSet, BookRequestViewSet, 
     UserProfileViewSet, WishlistViewSet, register, login, logout,
-    get_statistics, get_featured_books, create_book_simple, update_user, create_book_request, test_endpoint
+    get_statistics, get_featured_books, create_book_simple, update_user, create_book_request, test_endpoint, add_to_wishlist, simple_add_book
 )
 
 router = DefaultRouter()
@@ -26,10 +26,7 @@ urlpatterns = [
     path('api/create-book-simple/', create_book_simple, name='create-book-simple'),
     path('api/test/', test_endpoint, name='test'),
     path('api/book-request/', create_book_request, name='book-request'),
+    path('api/add-wishlist/', add_to_wishlist, name='add-wishlist'),
+    path('api/simple-add-book/', simple_add_book, name='simple-add-book'),
     path('api/auth/update-user/', update_user, name='update-user'),
-    
-    # Simple working endpoints
-    path('simple/login/', simple_login, name='simple-login'),
-    path('simple/books/', simple_books, name='simple-books'),
-    path('simple/request/', simple_request, name='simple-request'),
 ]
