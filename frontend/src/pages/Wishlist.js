@@ -149,15 +149,33 @@ const Wishlist = () => {
                         <p className="text-green-700 text-sm font-medium mb-2">
                           {availableBooks[item.id].length} matching book(s) available!
                         </p>
-                        <div className="space-y-1">
+                        <div className="space-y-2">
                           {availableBooks[item.id].slice(0, 2).map((book) => (
                             <Link
                               key={book.id}
                               to={`/book/${book.id}`}
-                              className="block text-xs text-green-600 hover:text-green-800 hover:underline flex items-center"
+                              className="flex items-center p-2 bg-white rounded-lg hover:bg-gray-50 transition-colors"
                             >
-                              <ExternalLink className="w-3 h-3 mr-1" />
-                              {book.title} by {book.owner_name}
+                              <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center mr-2 overflow-hidden">
+                                {(book.display_image || book.cover_image || book.cover_image_url) ? (
+                                  <img
+                                    src={book.display_image || book.cover_image || book.cover_image_url}
+                                    alt={book.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <BookOpen className="w-4 h-4 text-gray-400" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-green-600 hover:text-green-800 font-medium truncate">
+                                  {book.title}
+                                </p>
+                                <p className="text-xs text-gray-500 truncate">
+                                  by {book.owner_name}
+                                </p>
+                              </div>
+                              <ExternalLink className="w-3 h-3 text-green-500 ml-1" />
                             </Link>
                           ))}
                           {availableBooks[item.id].length > 2 && (
