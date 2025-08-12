@@ -27,7 +27,7 @@ const BookSearch = () => {
       setSearchQuery(queryFromUrl)
       fetchBooks(queryFromUrl)
     } else {
-      fetchBooks()
+      fetchBooks('', {})
     }
     
     if (user) {
@@ -38,11 +38,16 @@ const BookSearch = () => {
   const fetchBooks = async (query = '', filterParams = {}) => {
     try {
       setLoading(true)
-      const params = { q: query, ...filterParams }
+      const params = { 
+        q: query, 
+        ...filterParams 
+      }
+      console.log('Search params:', params)
       const response = await bookService.searchBooks(params)
       setBooks(response.data)
     } catch (error) {
       console.error('Failed to fetch books:', error)
+      setBooks([])
     } finally {
       setLoading(false)
     }
@@ -62,14 +67,15 @@ const BookSearch = () => {
   const fetchWishlist = async () => {
     try {
       const response = await wishlistService.getWishlist()
-      setWishlistItems(response.data)
+      setWishlistItems(response.data || [])
     } catch (error) {
       console.error('Error fetching wishlist:', error)
+      setWishlistItems([])
     }
   }
 
   const isInWishlist = (book) => {
-    return wishlistItems.some(item => 
+    return Array.isArray(wishlistItems) && wishlistItems.some(item => 
       item.title.toLowerCase() === book.title.toLowerCase() && 
       item.author.toLowerCase() === book.author.toLowerCase()
     )
@@ -230,9 +236,9 @@ const BookSearch = () => {
               <Link key={book.id} to={`/book/${book.id}`} className="group block">
                 <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-2">
                   <div className="relative overflow-hidden">
-                    {book.cover_image || book.cover_image_url ? (
+                    {book.display_image || book.cover_image || book.cover_image_url ? (
                       <img
-                        src={book.cover_image || book.cover_image_url}
+                        src={book.display_image || book.cover_image || book.cover_image_url}
                         alt={book.title}
                         className="w-full h-56 object-cover transition-transform duration-500 group-hover:scale-110"
                       />

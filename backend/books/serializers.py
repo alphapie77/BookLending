@@ -60,6 +60,9 @@ class BookSerializer(serializers.ModelSerializer):
     
     def get_display_image(self, obj):
         if obj.cover_image:
+            # If it's already a URL, return as is
+            if str(obj.cover_image).startswith('http'):
+                return str(obj.cover_image)
             return obj.cover_image.url
         return obj.cover_image_url
 
