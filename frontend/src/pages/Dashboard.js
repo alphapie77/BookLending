@@ -164,10 +164,10 @@ const Dashboard = () => {
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
-                      <Link to={`/books/${book.id}`} className="block">
+                      <Link to={`/book/${book.id}`} className="block">
                         <div className="w-full h-32 bg-gradient-to-br from-violet-100 to-purple-100 rounded mb-3 flex items-center justify-center">
-                          {book.cover_image ? (
-                            <img src={book.cover_image} alt={book.title} className="w-full h-full object-cover rounded" />
+                          {(book.display_image || book.cover_image || book.cover_image_url) ? (
+                            <img src={book.display_image || book.cover_image || book.cover_image_url} alt={book.title} className="w-full h-full object-cover rounded" />
                           ) : (
                             <BookOpen className="w-8 h-8 text-violet-600" />
                           )}
