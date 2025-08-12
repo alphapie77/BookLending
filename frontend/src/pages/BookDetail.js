@@ -167,9 +167,9 @@ const BookDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
           <div className="flex justify-center lg:justify-start">
             <div className="relative group">
-              {book.cover_image ? (
+              {(book.cover_image || book.cover_image_url) ? (
                 <img 
-                  src={book.cover_image}
+                  src={book.cover_image || book.cover_image_url}
                   alt={book.title}
                   className="w-full max-w-md h-auto rounded-3xl shadow-2xl transition-transform duration-500 group-hover:scale-105"
                   style={{ minHeight: '400px', objectFit: 'contain', backgroundColor: '#f8fafc' }}

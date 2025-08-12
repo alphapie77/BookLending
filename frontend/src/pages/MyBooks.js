@@ -82,9 +82,9 @@ const MyBooks = () => {
         <div className="grid grid-3">
           {books.map((book) => (
             <div key={book.id} className="card book-card">
-              {book.cover_image && (
+              {(book.cover_image || book.cover_image_url) && (
                 <img 
-                  src={book.cover_image} 
+                  src={book.cover_image || book.cover_image_url} 
                   alt={book.title}
                   className="book-image"
                 />

@@ -230,9 +230,9 @@ const BookSearch = () => {
               <Link key={book.id} to={`/book/${book.id}`} className="group block">
                 <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105 hover:-translate-y-2">
                   <div className="relative overflow-hidden">
-                    {book.cover_image ? (
+                    {book.cover_image || book.cover_image_url ? (
                       <img
-                        src={book.cover_image}
+                        src={book.cover_image || book.cover_image_url}
                         alt={book.title}
                         className="w-full h-56 object-cover transition-transform duration-500 group-hover:scale-110"
                       />

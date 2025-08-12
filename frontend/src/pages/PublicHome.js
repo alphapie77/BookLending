@@ -142,9 +142,9 @@ const PublicHome = () => {
                 className="group bg-white/60 backdrop-blur-sm rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 border border-white/20"
               >
                 <div className="h-48 bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center relative">
-                  {book.cover_image_url || book.cover_image ? (
+                  {book.cover_image || book.cover_image_url ? (
                     <img
-                      src={book.cover_image_url || book.cover_image}
+                      src={book.cover_image || book.cover_image_url}
                       alt={book.title}
                       className="w-full h-full object-cover"
                     />
