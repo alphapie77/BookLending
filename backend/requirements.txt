@@ -25,6 +25,9 @@ python-dotenv==1.0.1     # Load environment variables from .env files
 # Image Processing
 Pillow==11.3.0
 
+# HTTP Requests
+requests==2.32.3
+
 # Development Dependencies (Optional)
 # Uncomment for development environment
 # django-debug-toolbar==4.4.6
